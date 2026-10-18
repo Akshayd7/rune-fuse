@@ -1,0 +1,2616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>RUNE FUSE — Mystical Rune Forge Merge Game</title>
+  <style>
+    :root {
+      --bg-deep: #0b0c10;
+      --bg-forge: #14161f;
+      --bg-panel: rgba(24, 27, 38, 0.88);
+      --border-ember: rgba(255, 115, 36, 0.35);
+      --border-teal: rgba(0, 229, 255, 0.28);
+      --ember-orange: #ff6b2b;
+      --ember-gold: #ffb703;
+      --arcane-teal: #00e5ff;
+      --text-main: #f4f1ea;
+      --text-dim: #9aa0b4;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: var(--bg-deep);
+      background-image:
+        radial-gradient(circle at 50% 15%, rgba(0, 229, 255, 0.08) 0%, transparent 50%),
+        radial-gradient(circle at 50% 95%, rgba(255, 90, 20, 0.18) 0%, transparent 60%),
+        linear-gradient(180deg, #090a0f 0%, #12131c 55%, #1a1110 100%);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      color: var(--text-main);
+      touch-action: manipulation;
+    }
+
+    #app-shell {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      max-width: 460px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: env(safe-area-inset-top, 8px) 10px env(safe-area-inset-bottom, 8px) 10px;
+      z-index: 2;
+    }
+
+    /* Ambient full-viewport particle canvas */
+    #bg-canvas {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    /* Top HUD */
+    .hud-header {
+      position: relative;
+      z-index: 5;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding-top: 4px;
+      flex-shrink: 0;
+    }
+
+    .hud-top-row {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .stat-card {
+      background: var(--bg-panel);
+      border: 1px solid rgba(255, 255, 255, 0.09);
+      border-radius: 12px;
+      padding: 6px 10px;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+      backdrop-filter: blur(6px);
+    }
+
+    .stat-card.best-card {
+      align-items: flex-start;
+    }
+
+    .stat-card.next-card {
+      align-items: center;
+      flex-direction: row;
+      justify-content: flex-end;
+      gap: 8px;
+      padding: 4px 10px;
+    }
+
+    .stat-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+    }
+
+    .stat-value {
+      font-size: 17px;
+      font-weight: 800;
+      color: var(--ember-gold);
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 0.02em;
+    }
+
+    /* Center Score Display */
+    .score-center {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2px 12px;
+    }
+
+    .score-title {
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.2em;
+      color: var(--arcane-teal);
+      text-transform: uppercase;
+      text-shadow: 0 0 8px rgba(0, 229, 255, 0.45);
+    }
+
+    #score-display {
+      font-size: 34px;
+      line-height: 1.05;
+      font-weight: 900;
+      color: #ffffff;
+      font-variant-numeric: tabular-nums;
+      text-shadow:
+        0 0 18px rgba(255, 136, 43, 0.65),
+        0 2px 4px rgba(0, 0, 0, 0.8);
+      transition: transform 0.12s cubic-bezier(0.2, 1.4, 0.4, 1);
+    }
+
+    #score-display.bump {
+      transform: scale(1.18);
+      color: #ffe18d;
+    }
+
+    /* Right utilities: Next Preview + Mute Button */
+    .hud-right-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 6px;
+    }
+
+    .next-box {
+      background: var(--bg-panel);
+      border: 1px solid var(--border-teal);
+      border-radius: 12px;
+      padding: 4px 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+    }
+
+    .next-meta {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+    }
+
+    .next-tier-name {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-main);
+      white-space: nowrap;
+    }
+
+    #next-canvas {
+      width: 36px;
+      height: 36px;
+      display: block;
+    }
+
+    .icon-btn {
+      width: 40px;
+      height: 44px;
+      border-radius: 12px;
+      background: var(--bg-panel);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: transform 0.12s ease, border-color 0.2s ease, background 0.2s ease;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+      flex-shrink: 0;
+    }
+
+    .icon-btn:hover {
+      border-color: var(--arcane-teal);
+      background: rgba(34, 40, 56, 0.95);
+    }
+
+    .icon-btn:active {
+      transform: scale(0.92);
+    }
+
+    .icon-btn.muted {
+      color: #ff6b6b;
+      border-color: rgba(255, 107, 107, 0.35);
+    }
+
+    /* Ember Rise Pressure Bar */
+    .ember-bar-container {
+      background: var(--bg-panel);
+      border: 1px solid var(--border-ember);
+      border-radius: 10px;
+      padding: 5px 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      box-shadow: 0 3px 12px rgba(0, 0, 0, 0.4);
+    }
+
+    .ember-bar-label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: #ff9e66;
+      white-space: nowrap;
+    }
+
+    .ember-dot-indicator {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--ember-orange);
+      box-shadow: 0 0 8px var(--ember-orange);
+      animation: emberPulse 1.4s infinite ease-in-out;
+    }
+
+    @keyframes emberPulse {
+      0%, 100% { transform: scale(0.9); opacity: 0.75; }
+      50% { transform: scale(1.25); opacity: 1; }
+    }
+
+    .ember-pips {
+      flex: 1;
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 3px;
+      height: 8px;
+    }
+
+    .ember-pip {
+      border-radius: 3px;
+      background: rgba(255, 255, 255, 0.1);
+      transition: background 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .ember-pip.active {
+      background: linear-gradient(180deg, #ffba49 0%, #ff5412 100%);
+      box-shadow: 0 0 6px rgba(255, 107, 43, 0.7);
+    }
+
+    .ember-pip.danger {
+      background: linear-gradient(180deg, #ff6b6b 0%, #ff1e00 100%);
+      box-shadow: 0 0 8px rgba(255, 30, 0, 0.9);
+    }
+
+    #ember-countdown-text {
+      font-size: 12px;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      color: #ffd166;
+      min-width: 58px;
+      text-align: right;
+    }
+
+    /* Main Forge Well Area */
+    .well-stage {
+      position: relative;
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 4px 0;
+    }
+
+    #game-canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      border-radius: 16px;
+      cursor: pointer;
+      touch-action: none;
+    }
+
+    /* Toast Banner for New Rune Discovery & Combos */
+    #discovery-toast {
+      position: absolute;
+      top: 14px;
+      left: 50%;
+      transform: translate(-50%, -25px) scale(0.9);
+      background: linear-gradient(135deg, rgba(20, 26, 41, 0.96) 0%, rgba(40, 22, 18, 0.96) 100%);
+      border: 1.5px solid var(--ember-gold);
+      border-radius: 14px;
+      padding: 8px 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow:
+        0 10px 30px rgba(0, 0, 0, 0.75),
+        0 0 24px rgba(255, 183, 3, 0.45);
+      pointer-events: none;
+      opacity: 0;
+      transition: transform 0.32s cubic-bezier(0.18, 1.3, 0.4, 1), opacity 0.28s ease;
+      z-index: 15;
+      white-space: nowrap;
+    }
+
+    #discovery-toast.visible {
+      transform: translate(-50%, 0) scale(1);
+      opacity: 1;
+    }
+
+    #toast-canvas {
+      width: 36px;
+      height: 36px;
+      flex-shrink: 0;
+    }
+
+    .toast-copy {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .toast-kicker {
+      font-size: 9px;
+      font-weight: 900;
+      letter-spacing: 0.16em;
+      color: var(--ember-gold);
+      text-transform: uppercase;
+    }
+
+    .toast-name {
+      font-size: 14px;
+      font-weight: 800;
+      color: #ffffff;
+    }
+
+    /* Bottom Rune Codex Strip */
+    .codex-bar {
+      background: var(--bg-panel);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      padding: 5px 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 4px;
+      flex-shrink: 0;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+    }
+
+    .codex-slot {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1px;
+      padding: 2px 0;
+      border-radius: 8px;
+      opacity: 0.32;
+      filter: grayscale(0.85);
+      transition: opacity 0.3s ease, transform 0.3s ease, filter 0.3s ease, background 0.3s ease;
+    }
+
+    .codex-slot.unlocked {
+      opacity: 1;
+      filter: grayscale(0);
+    }
+
+    .codex-slot.newly-unlocked {
+      animation: codexPop 0.6s cubic-bezier(0.2, 1.5, 0.4, 1);
+      background: rgba(255, 183, 3, 0.12);
+    }
+
+    @keyframes codexPop {
+      0% { transform: scale(0.8); }
+      50% { transform: scale(1.22); }
+      100% { transform: scale(1); }
+    }
+
+    .codex-slot canvas {
+      width: 24px;
+      height: 24px;
+      display: block;
+    }
+
+    .codex-tier-num {
+      font-size: 9px;
+      font-weight: 700;
+      color: var(--text-dim);
+    }
+
+    .codex-slot.unlocked .codex-tier-num {
+      color: var(--text-main);
+    }
+
+    /* Modal Overlays (Start & Game Over) */
+    .overlay-screen {
+      position: fixed;
+      inset: 0;
+      z-index: 30;
+      background: radial-gradient(circle at 50% 35%, rgba(22, 26, 39, 0.88) 0%, rgba(8, 9, 14, 0.96) 100%);
+      backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      opacity: 1;
+      transition: opacity 0.28s ease;
+    }
+
+    .overlay-screen.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .overlay-card {
+      width: 100%;
+      max-width: 360px;
+      background: linear-gradient(180deg, rgba(28, 32, 46, 0.96) 0%, rgba(18, 17, 24, 0.98) 100%);
+      border: 1.5px solid rgba(255, 125, 45, 0.42);
+      border-radius: 22px;
+      padding: 24px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      box-shadow:
+        0 20px 60px rgba(0, 0, 0, 0.85),
+        0 0 40px rgba(255, 107, 43, 0.18),
+        inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    }
+
+    #hero-emblem-canvas {
+      width: 96px;
+      height: 96px;
+      margin-bottom: 10px;
+    }
+
+    .game-logo {
+      font-size: 36px;
+      font-weight: 900;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      background: linear-gradient(135deg, #fff6d6 0%, #ffb703 45%, #ff5412 85%, #00e5ff 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      text-shadow: 0 4px 24px rgba(255, 107, 43, 0.35);
+      margin-bottom: 4px;
+    }
+
+    .game-tagline {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--arcane-teal);
+      margin-bottom: 16px;
+    }
+
+    .how-to-list {
+      width: 100%;
+      background: rgba(10, 12, 18, 0.65);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      border-radius: 14px;
+      padding: 12px 14px;
+      margin-bottom: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+      text-align: left;
+    }
+
+    .how-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 12.5px;
+      line-height: 1.35;
+      color: #d7dbe8;
+    }
+
+    .how-bullet {
+      width: 22px;
+      height: 22px;
+      border-radius: 6px;
+      background: rgba(255, 107, 43, 0.18);
+      border: 1px solid rgba(255, 107, 43, 0.45);
+      color: var(--ember-gold);
+      font-size: 11px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .cta-btn {
+      width: 100%;
+      padding: 15px 24px;
+      border-radius: 14px;
+      border: none;
+      background: linear-gradient(135deg, #ff7b29 0%, #ff4500 55%, #d92600 100%);
+      color: #ffffff;
+      font-size: 16px;
+      font-weight: 900;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      cursor: pointer;
+      box-shadow:
+        0 8px 24px rgba(255, 78, 17, 0.5),
+        inset 0 1px 0 rgba(255, 255, 255, 0.35);
+      transition: transform 0.12s ease, box-shadow 0.2s ease;
+      animation: ctaPulse 2s infinite ease-in-out;
+    }
+
+    .cta-btn:hover {
+      box-shadow:
+        0 10px 28px rgba(255, 107, 43, 0.7),
+        0 0 16px rgba(0, 229, 255, 0.35),
+        inset 0 1px 0 rgba(255, 255, 255, 0.45);
+    }
+
+    .cta-btn:active {
+      transform: scale(0.96);
+    }
+
+    @keyframes ctaPulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.025); }
+    }
+
+    /* Game Over Stats Grid */
+    .gameover-kicker {
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.2em;
+      color: #ff6b6b;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+
+    .gameover-title {
+      font-size: 30px;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      color: #ffffff;
+      margin-bottom: 14px;
+      text-shadow: 0 0 20px rgba(255, 80, 30, 0.6);
+    }
+
+    .stats-grid {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+
+    .stat-box {
+      background: rgba(10, 12, 18, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      padding: 10px 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+    }
+
+    .stat-box.highlight {
+      border-color: rgba(255, 183, 3, 0.45);
+      background: rgba(255, 183, 3, 0.07);
+    }
+
+    .stat-box-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-dim);
+    }
+
+    .stat-box-val {
+      font-size: 22px;
+      font-weight: 900;
+      color: #ffffff;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .stat-box.highlight .stat-box-val {
+      color: var(--ember-gold);
+    }
+
+    .new-best-badge {
+      display: inline-block;
+      background: linear-gradient(90deg, #ffb703, #ff6b2b);
+      color: #0b0c10;
+      font-size: 10px;
+      font-weight: 900;
+      letter-spacing: 0.12em;
+      padding: 3px 8px;
+      border-radius: 999px;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    @media (max-height: 700px) {
+      #score-display { font-size: 28px; }
+      .hud-header { gap: 4px; }
+      .codex-bar { padding: 3px 6px; }
+      .codex-slot canvas { width: 20px; height: 20px; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Ambient drifting ember canvas -->
+  <canvas id="bg-canvas"></canvas>
+
+  <!-- Main Portrait Game Shell -->
+  <div id="app-shell">
+    <header class="hud-header">
+      <div class="hud-top-row">
+        <!-- Best Score -->
+        <div class="stat-card best-card">
+          <span class="stat-label">Best Forge</span>
+          <span class="stat-value" id="best-display">0</span>
+        </div>
+
+        <!-- Current Score -->
+        <div class="score-center">
+          <span class="score-title">Rune Fuse</span>
+          <div id="score-display">0</div>
+        </div>
+
+        <!-- Next Rune Preview & Mute Toggle -->
+        <div class="hud-right-wrap">
+          <div class="next-box" title="Next Rune to Drop">
+            <div class="next-meta">
+              <span class="stat-label">Next</span>
+              <span class="next-tier-name" id="next-name-label">Spark</span>
+            </div>
+            <canvas id="next-canvas" width="72" height="72"></canvas>
+          </div>
+          <button id="mute-btn" class="icon-btn" type="button" aria-label="Toggle Audio" title="Toggle Audio">
+            <svg id="icon-sound-on" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+              <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+              <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+            </svg>
+            <svg id="icon-sound-off" class="hidden" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+              <line x1="23" y1="9" x2="17" y2="15"></line>
+              <line x1="17" y1="9" x2="23" y2="15"></line>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Ember Rise Pressure Counter -->
+      <div class="ember-bar-container">
+        <div class="ember-bar-label">
+          <span class="ember-dot-indicator"></span>
+          <span>Ember Rise</span>
+        </div>
+        <div class="ember-pips" id="ember-pips"></div>
+        <span id="ember-countdown-text">12 drops</span>
+      </div>
+    </header>
+
+    <!-- Main Forge Well Canvas -->
+    <main class="well-stage" id="well-stage">
+      <canvas id="game-canvas"></canvas>
+
+      <!-- New Rune Discovery Toast -->
+      <div id="discovery-toast" role="status" aria-live="polite">
+        <canvas id="toast-canvas" width="72" height="72"></canvas>
+        <div class="toast-copy">
+          <span class="toast-kicker">New Rune Discovered!</span>
+          <span class="toast-name" id="toast-rune-name">Tier 2 · Cinder</span>
+        </div>
+      </div>
+    </main>
+
+    <!-- Discovered Rune Tiers Codex Bar (Tiers 1 - 8) -->
+    <footer class="codex-bar" id="codex-bar" aria-label="Discovered Rune Tiers"></footer>
+  </div>
+
+  <!-- START OVERLAY -->
+  <div id="start-overlay" class="overlay-screen">
+    <div class="overlay-card">
+      <canvas id="hero-emblem-canvas" width="192" height="192"></canvas>
+      <h1 class="game-logo">RUNE FUSE</h1>
+      <p class="game-tagline">Mystical One-Thumb Forge Puzzler</p>
+      <div class="how-to-list">
+        <div class="how-item">
+          <span class="how-bullet">1</span>
+          <span><strong>Tap any column</strong> to drop the glowing rune into the 5-column forge well.</span>
+        </div>
+        <div class="how-item">
+          <span class="how-bullet">2</span>
+          <span><strong>Match 2+ adjacent runes</strong> (horizontally or vertically) of the same tier to fuse them into the next tier!</span>
+        </div>
+        <div class="how-item">
+          <span class="how-bullet">3</span>
+          <span><strong>Every 12 drops</strong>, dead embers rise from below. Fuse runes <strong>directly above an ember</strong> to burn it out!</span>
+        </div>
+      </div>
+      <button id="start-btn" class="cta-btn" type="button">Tap to Start</button>
+    </div>
+  </div>
+
+  <!-- GAME OVER OVERLAY -->
+  <div id="gameover-overlay" class="overlay-screen hidden">
+    <div class="overlay-card">
+      <span class="gameover-kicker">Well Overflowed</span>
+      <h2 class="gameover-title">FORGE EXTINGUISHED</h2>
+      <div id="new-best-pill" class="new-best-badge hidden">New Best Record!</div>
+      <div class="stats-grid">
+        <div class="stat-box highlight">
+          <span class="stat-box-label">Final Score</span>
+          <span class="stat-box-val" id="go-score">0</span>
+        </div>
+        <div class="stat-box highlight">
+          <span class="stat-box-label">Best Score</span>
+          <span class="stat-box-val" id="go-best">0</span>
+        </div>
+        <div class="stat-box">
+          <span class="stat-box-label">Highest Rune</span>
+          <span class="stat-box-val" id="go-max-tier">Spark</span>
+        </div>
+        <div class="stat-box">
+          <span class="stat-box-label">Max Cascade</span>
+          <span class="stat-box-val" id="go-max-combo">x1</span>
+        </div>
+      </div>
+      <button id="restart-btn" class="cta-btn" type="button">Tap to Play Again</button>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      'use strict';
+
+      // =========================================================================
+      // 1. RUNE TIER DEFINITIONS (Tiers 1 = Spark up to 8 = Ancient Sun)
+      // =========================================================================
+      const RUNE_TIERS = [
+        null, // 1-indexed
+        {
+          tier: 1,
+          name: 'Spark',
+          basePoints: 10,
+          primary: '#ff6b2b',
+          secondary: '#ffae42',
+          core: '#fff1d0',
+          stone: '#261815',
+          rim: '#c84b18'
+        },
+        {
+          tier: 2,
+          name: 'Cinder',
+          basePoints: 25,
+          primary: '#ff9f1c',
+          secondary: '#ffd166',
+          core: '#fff9e6',
+          stone: '#2a2014',
+          rim: '#d97f0f'
+        },
+        {
+          tier: 3,
+          name: 'Flame',
+          basePoints: 60,
+          primary: '#ffd166',
+          secondary: '#ff6b2b',
+          core: '#ffffff',
+          stone: '#2c2614',
+          rim: '#e5a922'
+        },
+        {
+          tier: 4,
+          name: 'Hearth',
+          basePoints: 140,
+          primary: '#2ec4b6',
+          secondary: '#80ffdb',
+          core: '#e8fffb',
+          stone: '#122827',
+          rim: '#1a9387'
+        },
+        {
+          tier: 5,
+          name: 'Aether',
+          basePoints: 300,
+          primary: '#00e5ff',
+          secondary: '#72efdd',
+          core: '#f0ffff',
+          stone: '#11222e',
+          rim: '#009fbd'
+        },
+        {
+          tier: 6,
+          name: 'Tempest',
+          basePoints: 640,
+          primary: '#5e7ce2',
+          secondary: '#00e5ff',
+          core: '#eef2ff',
+          stone: '#161b33',
+          rim: '#3f56b5'
+        },
+        {
+          tier: 7,
+          name: 'Eclipse',
+          basePoints: 1400,
+          primary: '#c77dff',
+          secondary: '#ff70a6',
+          core: '#fdf0ff',
+          stone: '#251533',
+          rim: '#9d4edd'
+        },
+        {
+          tier: 8,
+          name: 'Ancient Sun',
+          basePoints: 3200,
+          primary: '#fff3b0',
+          secondary: '#00f5d4',
+          core: '#ffffff',
+          stone: '#2d2212',
+          rim: '#ffb703'
+        }
+      ];
+
+      const COLS = 5;
+      const WELL_ROWS = 7;       // Visible safe rows inside the well
+      const TOTAL_ROWS = 8;      // Row 0 is the overflow zone above the well rim; Rows 1..7 are inside the well
+      const DROPS_PER_EMBER = 12;
+      const STORAGE_KEY_BEST = 'rune_fuse_best_score_v1';
+
+      // =========================================================================
+      // 2. PROCEDURAL RUNE & EMBER GLYPH RENDERER (Pure Canvas 2D)
+      // =========================================================================
+      function drawRuneToken(ctx, x, y, radius, tier, animTime, scale = 1, alpha = 1, pulseBoost = 0) {
+        const info = RUNE_TIERS[Math.min(8, Math.max(1, tier))];
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.translate(x, y);
+        ctx.scale(scale, scale);
+
+        const r = radius * 0.9;
+        const pulse = Math.sin(animTime * 3.5 + tier * 0.9) * 0.05 + pulseBoost;
+
+        // Outer mystical glow
+        const glowGrad = ctx.createRadialGradient(0, 0, r * 0.25, 0, 0, r * (1.28 + pulse));
+        glowGrad.addColorStop(0, hexToRgba(info.primary, 0.55));
+        glowGrad.addColorStop(0.65, hexToRgba(info.primary, 0.18));
+        glowGrad.addColorStop(1, hexToRgba(info.primary, 0));
+        ctx.fillStyle = glowGrad;
+        ctx.beginPath();
+        ctx.arc(0, 0, r * (1.28 + pulse), 0, Math.PI * 2);
+        ctx.fill();
+
+        // Carved Octagonal Obsidian/Forge Tablet Base
+        drawOctagonPath(ctx, r);
+        const stoneGrad = ctx.createLinearGradient(-r, -r, r, r);
+        stoneGrad.addColorStop(0, lightenHex(info.stone, 22));
+        stoneGrad.addColorStop(0.5, info.stone);
+        stoneGrad.addColorStop(1, '#090a0e');
+        ctx.fillStyle = stoneGrad;
+        ctx.fill();
+
+        // Tablet Beveled Metallic Rim
+        ctx.lineWidth = Math.max(1.8, r * 0.1);
+        const rimGrad = ctx.createLinearGradient(-r, -r, r, r);
+        rimGrad.addColorStop(0, info.secondary);
+        rimGrad.addColorStop(0.5, info.rim);
+        rimGrad.addColorStop(1, info.primary);
+        ctx.strokeStyle = rimGrad;
+        ctx.stroke();
+
+        // Inner Recessed Groove Ring
+        drawOctagonPath(ctx, r * 0.8);
+        ctx.lineWidth = Math.max(1, r * 0.04);
+        ctx.strokeStyle = hexToRgba(info.primary, 0.32);
+        ctx.stroke();
+
+        // Inner Glow Well
+        const innerGlow = ctx.createRadialGradient(0, 0, 0, 0, 0, r * 0.75);
+        innerGlow.addColorStop(0, hexToRgba(info.primary, 0.34));
+        innerGlow.addColorStop(1, hexToRgba(info.primary, 0));
+        ctx.fillStyle = innerGlow;
+        ctx.fill();
+
+        // Carved Glowing Glyph Geometry (Two passes: colored aura stroke + bright core stroke)
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+
+        // Pass 1: Outer glyph bloom
+        ctx.save();
+        ctx.strokeStyle = info.primary;
+        ctx.fillStyle = info.primary;
+        ctx.shadowColor = info.primary;
+        ctx.shadowBlur = r * 0.38;
+        ctx.lineWidth = Math.max(2.6, r * 0.16);
+        traceGlyphShape(ctx, tier, r * 0.54, animTime);
+        ctx.restore();
+
+        // Pass 2: Crisp hot core
+        ctx.save();
+        ctx.strokeStyle = info.core;
+        ctx.fillStyle = info.core;
+        ctx.lineWidth = Math.max(1.3, r * 0.075);
+        traceGlyphShape(ctx, tier, r * 0.54, animTime);
+        ctx.restore();
+
+        // Subtle tier pips / corner notches on high tiers
+        if (tier >= 4) {
+          ctx.fillStyle = info.secondary;
+          const pipCount = Math.min(4, tier - 3);
+          for (let i = 0; i < pipCount; i++) {
+            const ang = (i * Math.PI) / 2 + Math.PI / 4;
+            const px = Math.cos(ang) * (r * 0.78);
+            const py = Math.sin(ang) * (r * 0.78);
+            ctx.beginPath();
+            ctx.arc(px, py, Math.max(1.5, r * 0.06), 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+
+        ctx.restore();
+      }
+
+      function traceGlyphShape(ctx, tier, s, animTime) {
+        ctx.beginPath();
+        switch (tier) {
+          case 1: {
+            // Tier 1: SPARK — Kenaz/Seed Flame (vertical staff + upward chevron + spark dot)
+            ctx.moveTo(0, s * 0.85);
+            ctx.lineTo(0, -s * 0.45);
+            ctx.moveTo(-s * 0.55, s * 0.15);
+            ctx.lineTo(0, -s * 0.55);
+            ctx.lineTo(s * 0.55, s * 0.15);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.arc(0, -s * 0.82, s * 0.13, 0, Math.PI * 2);
+            ctx.fill();
+            break;
+          }
+          case 2: {
+            // Tier 2: CINDER — Fehu/Twin Ember Horns (bound diamond + rising twin branches)
+            ctx.moveTo(0, s * 0.9);
+            ctx.lineTo(0, -s * 0.85);
+            ctx.moveTo(-s * 0.65, -s * 0.25);
+            ctx.lineTo(0, -s * 0.85);
+            ctx.lineTo(s * 0.65, -s * 0.25);
+            ctx.moveTo(-s * 0.55, s * 0.35);
+            ctx.lineTo(0, -s * 0.15);
+            ctx.lineTo(s * 0.55, s * 0.35);
+            ctx.stroke();
+            break;
+          }
+          case 3: {
+            // Tier 3: FLAME — Crowned Sol Trident + Inner Diamond
+            ctx.moveTo(0, -s * 0.92);
+            ctx.lineTo(s * 0.58, 0);
+            ctx.lineTo(0, s * 0.92);
+            ctx.lineTo(-s * 0.58, 0);
+            ctx.closePath();
+            ctx.moveTo(0, -s * 0.92);
+            ctx.lineTo(0, s * 0.92);
+            ctx.moveTo(-s * 0.82, -s * 0.2);
+            ctx.lineTo(-s * 0.45, -s * 0.72);
+            ctx.moveTo(s * 0.82, -s * 0.2);
+            ctx.lineTo(s * 0.45, -s * 0.72);
+            ctx.stroke();
+            break;
+          }
+          case 4: {
+            // Tier 4: HEARTH — Dagaz/Ingwaz Anvil Hourglass interlocked with Horizontal Bar
+            ctx.moveTo(-s * 0.68, -s * 0.78);
+            ctx.lineTo(s * 0.68, -s * 0.78);
+            ctx.lineTo(-s * 0.68, s * 0.78);
+            ctx.lineTo(s * 0.68, s * 0.78);
+            ctx.closePath();
+            ctx.moveTo(-s * 0.82, 0);
+            ctx.lineTo(s * 0.82, 0);
+            ctx.stroke();
+            break;
+          }
+          case 5: {
+            // Tier 5: AETHER — Algiz/Star Conduit (6-pointed runic bind-star + center ring)
+            ctx.moveTo(0, -s * 0.95);
+            ctx.lineTo(0, s * 0.95);
+            ctx.moveTo(-s * 0.78, -s * 0.48);
+            ctx.lineTo(s * 0.78, s * 0.48);
+            ctx.moveTo(-s * 0.78, s * 0.48);
+            ctx.lineTo(s * 0.78, -s * 0.48);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.arc(0, 0, s * 0.36, 0, Math.PI * 2);
+            ctx.stroke();
+            break;
+          }
+          case 6: {
+            // Tier 6: TEMPEST — Interlocked Dual Triangles (Hexagram of the Forge)
+            for (let t = 0; t < 2; t++) {
+              const rot = t * (Math.PI / 3) - Math.PI / 2;
+              for (let i = 0; i < 3; i++) {
+                const a = rot + (i * Math.PI * 2) / 3;
+                const px = Math.cos(a) * s * 0.92;
+                const py = Math.sin(a) * s * 0.92;
+                if (i === 0) ctx.moveTo(px, py);
+                else ctx.lineTo(px, py);
+              }
+              ctx.closePath();
+            }
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.arc(0, 0, s * 0.2, 0, Math.PI * 2);
+            ctx.fill();
+            break;
+          }
+          case 7: {
+            // Tier 7: ECLIPSE — Crescent Halo + Celestial Eye + Vertical Spear
+            ctx.arc(0, 0, s * 0.78, 0, Math.PI * 2);
+            ctx.moveTo(-s * 0.85, 0);
+            ctx.quadraticCurveTo(0, -s * 0.65, s * 0.85, 0);
+            ctx.quadraticCurveTo(0, s * 0.65, -s * 0.85, 0);
+            ctx.moveTo(0, -s * 1.0);
+            ctx.lineTo(0, s * 1.0);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.arc(0, 0, s * 0.22, 0, Math.PI * 2);
+            ctx.fill();
+            break;
+          }
+          case 8:
+          default: {
+            // Tier 8: ANCIENT SUN — Rotating 8-Ray Solar Wheel + Sacred Inner Octagram
+            const spin = animTime * 0.6;
+            ctx.arc(0, 0, s * 0.52, 0, Math.PI * 2);
+            for (let i = 0; i < 8; i++) {
+              const a = spin + (i * Math.PI) / 4;
+              ctx.moveTo(Math.cos(a) * s * 0.52, Math.sin(a) * s * 0.52);
+              ctx.lineTo(Math.cos(a) * s * 1.02, Math.sin(a) * s * 1.02);
+            }
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.arc(0, 0, s * 0.24, 0, Math.PI * 2);
+            ctx.fill();
+            break;
+          }
+        }
+      }
+
+      // Draw a dead/smoldering Ember block (pushed up from bottom every 12 drops)
+      function drawEmberBlock(ctx, x, y, radius, animTime, scale = 1, alpha = 1) {
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.translate(x, y);
+        ctx.scale(scale, scale);
+
+        const r = radius * 0.9;
+        const pulse = 0.5 + 0.5 * Math.sin(animTime * 4.2 + x * 0.05);
+
+        // Smoldering dark slag block with glowing magma cracks
+        drawRoundedRect(ctx, -r, -r, r * 2, r * 2, r * 0.28);
+        const slagGrad = ctx.createLinearGradient(-r, -r, r, r);
+        slagGrad.addColorStop(0, '#2b2120');
+        slagGrad.addColorStop(0.5, '#191314');
+        slagGrad.addColorStop(1, '#0e0a0b');
+        ctx.fillStyle = slagGrad;
+        ctx.fill();
+
+        ctx.lineWidth = Math.max(1.5, r * 0.09);
+        ctx.strokeStyle = `rgba(255, 84, 18, ${0.45 + pulse * 0.35})`;
+        ctx.stroke();
+
+        // Internal magma fissure lines
+        ctx.beginPath();
+        ctx.moveTo(-r * 0.65, -r * 0.45);
+        ctx.lineTo(-r * 0.1, -r * 0.05);
+        ctx.lineTo(r * 0.6, -r * 0.5);
+        ctx.moveTo(-r * 0.1, -r * 0.05);
+        ctx.lineTo(-r * 0.45, r * 0.6);
+        ctx.moveTo(-r * 0.1, -r * 0.05);
+        ctx.lineTo(r * 0.55, r * 0.48);
+
+        ctx.strokeStyle = `rgba(255, 115, 36, ${0.7 + pulse * 0.3})`;
+        ctx.lineWidth = Math.max(2.2, r * 0.13);
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.shadowColor = '#ff4500';
+        ctx.shadowBlur = 8;
+        ctx.stroke();
+
+        ctx.strokeStyle = `rgba(255, 220, 130, ${0.65 + pulse * 0.35})`;
+        ctx.lineWidth = Math.max(1, r * 0.05);
+        ctx.stroke();
+
+        ctx.restore();
+      }
+
+      function drawOctagonPath(ctx, r) {
+        const k = 0.41421356; // tan(pi/8)
+        ctx.beginPath();
+        ctx.moveTo(-r * k, -r);
+        ctx.lineTo(r * k, -r);
+        ctx.lineTo(r, -r * k);
+        ctx.lineTo(r, r * k);
+        ctx.lineTo(r * k, r);
+        ctx.lineTo(-r * k, r);
+        ctx.lineTo(-r, r * k);
+        ctx.lineTo(-r, -r * k);
+        ctx.closePath();
+      }
+
+      function drawRoundedRect(ctx, x, y, w, h, rad) {
+        ctx.beginPath();
+        ctx.moveTo(x + rad, y);
+        ctx.lineTo(x + w - rad, y);
+        ctx.quadraticCurveTo(x + w, y, x + w, y + rad);
+        ctx.lineTo(x + w, y + h - rad);
+        ctx.quadraticCurveTo(x + w, y + h, x + w - rad, y + h);
+        ctx.lineTo(x + rad, y + h);
+        ctx.quadraticCurveTo(x, y + h, x, y + h - rad);
+        ctx.lineTo(x, y + rad);
+        ctx.quadraticCurveTo(x, y, x + rad, y);
+        ctx.closePath();
+      }
+
+      function hexToRgba(hex, alpha) {
+        const clean = hex.replace('#', '');
+        const num = parseInt(clean, 16);
+        const r = (num >> 16) & 255;
+        const g = (num >> 8) & 255;
+        const b = num & 255;
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+      }
+
+      function lightenHex(hex, amt) {
+        const clean = hex.replace('#', '');
+        const num = parseInt(clean, 16);
+        const r = Math.min(255, ((num >> 16) & 255) + amt);
+        const g = Math.min(255, ((num >> 8) & 255) + amt);
+        const b = Math.min(255, (num & 255) + amt);
+        return `rgb(${r}, ${g}, ${b})`;
+      }
+
+      // =========================================================================
+      // 3. WEBAUDIO SYNTHESIZER (Background Music Loop + Sound Effects)
+      // =========================================================================
+      class SoundForge {
+        constructor() {
+          this.ctx = null;
+          this.muted = false;
+          this.musicPlaying = false;
+          this.musicTimer = null;
+          this.stepIndex = 0;
+        }
+
+        ensureContext() {
+          if (!this.ctx) {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (AudioCtx) {
+              this.ctx = new AudioCtx();
+            }
+          }
+          if (this.ctx && this.ctx.state === 'suspended') {
+            this.ctx.resume().catch(() => {});
+          }
+        }
+
+        toggleMute() {
+          this.muted = !this.muted;
+          this.ensureContext();
+          if (this.muted) {
+            this.stopMusic();
+          } else {
+            this.startMusic();
+          }
+          return this.muted;
+        }
+
+        startMusic() {
+          if (this.muted || this.musicPlaying) return;
+          this.ensureContext();
+          if (!this.ctx) return;
+
+          this.musicPlaying = true;
+          // Mystical D Dorian pentatonic forge sequence (in Hz)
+          const bassNotes = [73.42, 73.42, 82.41, 87.31, 73.42, 65.41, 73.42, 98.0];
+          const chimeNotes = [293.66, 349.23, 440.0, 523.25, 440.0, 349.23, 329.63, 293.66];
+
+          const tick = () => {
+            if (!this.musicPlaying || this.muted || !this.ctx) return;
+            const now = this.ctx.currentTime;
+            const step = this.stepIndex % 8;
+
+            // Warm sub-forge pulse on even steps
+            if (step % 2 === 0) {
+              this.playTone({
+                freq: bassNotes[step],
+                type: 'triangle',
+                duration: 0.85,
+                gain: 0.045,
+                attack: 0.06,
+                startTime: now
+              });
+            }
+
+            // Delicate mystical rune plucks
+            const melodyFreq = chimeNotes[(this.stepIndex * 3 + step) % chimeNotes.length];
+            this.playTone({
+              freq: melodyFreq,
+              type: 'sine',
+              duration: 0.42,
+              gain: 0.025,
+              attack: 0.015,
+              startTime: now
+            });
+
+            this.stepIndex++;
+          };
+
+          tick();
+          this.musicTimer = setInterval(tick, 460);
+        }
+
+        stopMusic() {
+          this.musicPlaying = false;
+          if (this.musicTimer) {
+            clearInterval(this.musicTimer);
+            this.musicTimer = null;
+          }
+        }
+
+        playTone({ freq, endFreq = null, type = 'sine', duration = 0.2, gain = 0.12, attack = 0.01, startTime = null }) {
+          if (this.muted) return;
+          this.ensureContext();
+          if (!this.ctx) return;
+
+          const t0 = startTime !== null ? startTime : this.ctx.currentTime;
+          const osc = this.ctx.createOscillator();
+          const g = this.ctx.createGain();
+
+          osc.type = type;
+          osc.frequency.setValueAtTime(freq, t0);
+          if (endFreq !== null) {
+            osc.frequency.exponentialRampToValueAtTime(Math.max(20, endFreq), t0 + duration);
+          }
+
+          g.gain.setValueAtTime(0.0001, t0);
+          g.gain.linearRampToValueAtTime(gain, t0 + attack);
+          g.gain.exponentialRampToValueAtTime(0.0001, t0 + duration);
+
+          osc.connect(g);
+          g.connect(this.ctx.destination);
+
+          osc.start(t0);
+          osc.stop(t0 + duration + 0.02);
+        }
+
+        playDrop() {
+          this.playTone({ freq: 260, endFreq: 135, type: 'triangle', duration: 0.13, gain: 0.14, attack: 0.005 });
+        }
+
+        playSettle() {
+          this.playTone({ freq: 145, endFreq: 95, type: 'sine', duration: 0.08, gain: 0.09, attack: 0.004 });
+        }
+
+        playFuse(tier, cascadeIndex) {
+          if (this.muted) return;
+          this.ensureContext();
+          if (!this.ctx) return;
+
+          const now = this.ctx.currentTime;
+          const baseScale = [261.63, 293.66, 329.63, 392.0, 440.0, 523.25, 587.33, 659.25, 783.99];
+          const root = baseScale[Math.min(baseScale.length - 1, tier - 1)] * Math.pow(1.06, Math.min(8, cascadeIndex - 1));
+
+          // Resonant crystal-anvil chord
+          this.playTone({ freq: root, endFreq: root * 1.02, type: 'triangle', duration: 0.28, gain: 0.15, attack: 0.008, startTime: now });
+          this.playTone({ freq: root * 1.5, endFreq: root * 2.0, type: 'sine', duration: 0.34, gain: 0.11, attack: 0.015, startTime: now + 0.03 });
+        }
+
+        playDiscoveryFanfare() {
+          if (this.muted) return;
+          this.ensureContext();
+          if (!this.ctx) return;
+          const now = this.ctx.currentTime;
+          const notes = [392.0, 493.88, 587.33, 783.99];
+          notes.forEach((n, idx) => {
+            this.playTone({
+              freq: n,
+              type: 'triangle',
+              duration: 0.32,
+              gain: 0.13,
+              attack: 0.01,
+              startTime: now + idx * 0.075
+            });
+          });
+        }
+
+        playEmberRise() {
+          if (this.muted) return;
+          this.ensureContext();
+          if (!this.ctx) return;
+          const now = this.ctx.currentTime;
+          this.playTone({ freq: 85, endFreq: 135, type: 'sawtooth', duration: 0.38, gain: 0.11, attack: 0.03, startTime: now });
+          this.playTone({ freq: 110, endFreq: 72, type: 'triangle', duration: 0.42, gain: 0.14, attack: 0.02, startTime: now + 0.04 });
+        }
+
+        playEmberBurnout() {
+          if (this.muted) return;
+          this.ensureContext();
+          if (!this.ctx) return;
+          const now = this.ctx.currentTime;
+          this.playTone({ freq: 520, endFreq: 180, type: 'sawtooth', duration: 0.18, gain: 0.08, attack: 0.006, startTime: now });
+        }
+
+        playGameOver() {
+          if (this.muted) return;
+          this.ensureContext();
+          if (!this.ctx) return;
+          const now = this.ctx.currentTime;
+          const notes = [349.23, 329.63, 293.66, 220.0];
+          notes.forEach((n, idx) => {
+            this.playTone({
+              freq: n,
+              type: 'sawtooth',
+              duration: 0.45,
+              gain: 0.09,
+              attack: 0.02,
+              startTime: now + idx * 0.14
+            });
+          });
+        }
+      }
+
+      const sound = new SoundForge();
+
+      // =========================================================================
+      // 4. DOM ELEMENTS & STORAGE HELPERS
+      // =========================================================================
+      const bgCanvas = document.getElementById('bg-canvas');
+      const bgCtx = bgCanvas.getContext('2d');
+
+      const gameCanvas = document.getElementById('game-canvas');
+      const gameCtx = gameCanvas.getContext('2d');
+
+      const nextCanvas = document.getElementById('next-canvas');
+      const nextCtx = nextCanvas.getContext('2d');
+
+      const toastEl = document.getElementById('discovery-toast');
+      const toastCanvas = document.getElementById('toast-canvas');
+      const toastCtx = toastCanvas.getContext('2d');
+      const toastRuneName = document.getElementById('toast-rune-name');
+
+      const heroCanvas = document.getElementById('hero-emblem-canvas');
+      const heroCtx = heroCanvas.getContext('2d');
+
+      const scoreDisplay = document.getElementById('score-display');
+      const bestDisplay = document.getElementById('best-display');
+      const nextNameLabel = document.getElementById('next-name-label');
+      const emberPipsEl = document.getElementById('ember-pips');
+      const emberCountdownText = document.getElementById('ember-countdown-text');
+      const codexBarEl = document.getElementById('codex-bar');
+
+      const muteBtn = document.getElementById('mute-btn');
+      const iconSoundOn = document.getElementById('icon-sound-on');
+      const iconSoundOff = document.getElementById('icon-sound-off');
+
+      const startOverlay = document.getElementById('start-overlay');
+      const startBtn = document.getElementById('start-btn');
+      const gameoverOverlay = document.getElementById('gameover-overlay');
+      const restartBtn = document.getElementById('restart-btn');
+
+      const goScoreEl = document.getElementById('go-score');
+      const goBestEl = document.getElementById('go-best');
+      const goMaxTierEl = document.getElementById('go-max-tier');
+      const goMaxComboEl = document.getElementById('go-max-combo');
+      const newBestPill = document.getElementById('new-best-pill');
+
+      function loadBestScore() {
+        try {
+          const val = localStorage.getItem(STORAGE_KEY_BEST);
+          return val ? Math.max(0, parseInt(val, 10) || 0) : 0;
+        } catch (e) {
+          return 0;
+        }
+      }
+
+      function saveBestScore(score) {
+        try {
+          localStorage.setItem(STORAGE_KEY_BEST, String(score));
+        } catch (e) {
+          // Ignore storage quota / sandbox restrictions
+        }
+      }
+
+      // Build 12 Ember Pips in the HUD
+      const pipElements = [];
+      for (let i = 0; i < DROPS_PER_EMBER; i++) {
+        const pip = document.createElement('div');
+        pip.className = 'ember-pip';
+        emberPipsEl.appendChild(pip);
+        pipElements.push(pip);
+      }
+
+      // Build Discovered Runes Codex Strip (Tiers 1 - 8)
+      const codexSlotElements = [];
+      for (let t = 1; t <= 8; t++) {
+        const slot = document.createElement('div');
+        slot.className = 'codex-slot';
+        slot.title = `Tier ${t}: ${RUNE_TIERS[t].name}`;
+        const c = document.createElement('canvas');
+        c.width = 48;
+        c.height = 48;
+        const label = document.createElement('span');
+        label.className = 'codex-tier-num';
+        label.textContent = RUNE_TIERS[t].name.split(' ')[0];
+        slot.appendChild(c);
+        slot.appendChild(label);
+        codexBarEl.appendChild(slot);
+        codexSlotElements.push({ slot, canvas: c, ctx: c.getContext('2d'), tier: t });
+      }
+
+      function renderStaticCodexIcons() {
+        codexSlotElements.forEach((item) => {
+          item.ctx.clearRect(0, 0, 48, 48);
+          drawRuneToken(item.ctx, 24, 24, 21, item.tier, 0.5);
+        });
+      }
+      renderStaticCodexIcons();
+
+      // =========================================================================
+      // 5. GAME STATE & ENTITIES
+      // =========================================================================
+      let gameState = 'START'; // 'START' | 'IDLE' | 'BUSY' | 'GAMEOVER'
+      let grid = [];           // grid[r][c] = null | { type: 'rune', tier, yOffset, vy, scale, pulse } | { type: 'ember', yOffset, vy, scale }
+      let score = 0;
+      let bestScore = loadBestScore();
+      let dropsUntilEmber = DROPS_PER_EMBER;
+      let nextTier = 1;
+      let hoverCol = 2;        // Highlighted column (0..4)
+      let discoveredTiers = new Set([1]);
+      let highestTierReached = 1;
+      let maxCascadeReached = 1;
+      let newBestAchievedThisRun = false;
+
+      // Visual / Animation FX state
+      let animTime = 0;
+      let lastFrameTime = performance.now();
+      let screenShake = 0;
+      let toastTimeout = null;
+      let activeToastTier = 1;
+
+      // Active merging ghost animations, shockwaves, particles, and floating texts
+      let mergeGhosts = [];    // { fromR, fromC, toR, toC, tier, progress }
+      let shockwaves = [];     // { x, y, radius, maxRadius, color, alpha }
+      let forgeParticles = []; // { x, y, vx, vy, size, color, alpha, decay }
+      let floatingTexts = [];  // { x, y, text, subtext, color, alpha, vy, scale }
+
+      bestDisplay.textContent = bestScore.toLocaleString();
+
+      function createEmptyGrid() {
+        const g = [];
+        for (let r = 0; r < TOTAL_ROWS; r++) {
+          const row = [];
+          for (let c = 0; c < COLS; c++) {
+            row.push(null);
+          }
+          g.push(row);
+        }
+        return g;
+      }
+
+      function pickNextRuneTier() {
+        // Spawn tiers 1..4 weighted by how far the player has progressed
+        const cap = Math.min(4, Math.max(2, highestTierReached));
+        const weights = [50, 30, 14, 6];
+        let totalW = 0;
+        for (let i = 0; i < cap; i++) totalW += weights[i];
+        let roll = Math.random() * totalW;
+        for (let i = 0; i < cap; i++) {
+          if (roll < weights[i]) return i + 1;
+          roll -= weights[i];
+        }
+        return 1;
+      }
+
+      function updateHud() {
+        scoreDisplay.textContent = score.toLocaleString();
+        bestDisplay.textContent = bestScore.toLocaleString();
+
+        const nextInfo = RUNE_TIERS[nextTier];
+        nextNameLabel.textContent = nextInfo.name;
+        nextNameLabel.style.color = nextInfo.primary;
+
+        // Ember pips: fill up as drops count down from 12 to 1
+        const filledCount = DROPS_PER_EMBER - dropsUntilEmber;
+        const isDanger = dropsUntilEmber <= 3;
+        for (let i = 0; i < DROPS_PER_EMBER; i++) {
+          const pip = pipElements[i];
+          pip.classList.toggle('active', i < filledCount);
+          pip.classList.toggle('danger', isDanger && i < filledCount);
+        }
+        emberCountdownText.textContent =
+          dropsUntilEmber === 1 ? 'NEXT DROP!' : `${dropsUntilEmber} drops`;
+        emberCountdownText.style.color = isDanger ? '#ff6b6b' : '#ffd166';
+
+        // Codex slots
+        codexSlotElements.forEach(({ slot, tier }) => {
+          slot.classList.toggle('unlocked', discoveredTiers.has(tier));
+        });
+      }
+
+      function showDiscoveryToast(tier) {
+        activeToastTier = tier;
+        const info = RUNE_TIERS[tier];
+        toastRuneName.textContent = `Tier ${tier} · ${info.name}`;
+        toastRuneName.style.color = info.primary;
+        toastEl.classList.add('visible');
+
+        const slotObj = codexSlotElements[tier - 1];
+        if (slotObj) {
+          slotObj.slot.classList.remove('newly-unlocked');
+          void slotObj.slot.offsetWidth;
+          slotObj.slot.classList.add('newly-unlocked');
+        }
+
+        if (toastTimeout) clearTimeout(toastTimeout);
+        toastTimeout = setTimeout(() => {
+          toastEl.classList.remove('visible');
+        }, 2500);
+      }
+
+      // =========================================================================
+      // 6. CORE GAMEPLAY FLOW: DROP, GRAVITY, CASCADE FUSIONS & EMBER RISE
+      // =========================================================================
+      function startNewGame() {
+        sound.ensureContext();
+        sound.startMusic();
+
+        grid = createEmptyGrid();
+        score = 0;
+        dropsUntilEmber = DROPS_PER_EMBER;
+        discoveredTiers = new Set([1]);
+        highestTierReached = 1;
+        maxCascadeReached = 1;
+        newBestAchievedThisRun = false;
+        nextTier = 1;
+        hoverCol = 2;
+
+        mergeGhosts = [];
+        shockwaves = [];
+        forgeParticles = [];
+        floatingTexts = [];
+        toastEl.classList.remove('visible');
+
+        startOverlay.classList.add('hidden');
+        gameoverOverlay.classList.add('hidden');
+
+        gameState = 'IDLE';
+        updateHud();
+      }
+
+      // Drop the current `nextTier` rune into column `col`
+      async function handleColumnDrop(col) {
+        if (gameState !== 'IDLE') return;
+        if (col < 0 || col >= COLS) return;
+
+        sound.ensureContext();
+        if (!sound.musicPlaying && !sound.muted) {
+          sound.startMusic();
+        }
+
+        hoverCol = col;
+
+        // Find lowest empty row in `col` (from TOTAL_ROWS - 1 up to 0)
+        let targetRow = -1;
+        for (let r = TOTAL_ROWS - 1; r >= 0; r--) {
+          if (!grid[r][col]) {
+            targetRow = r;
+            break;
+          }
+        }
+
+        if (targetRow === -1) {
+          // Column is even full in overflow buffer
+          triggerGameOver();
+          return;
+        }
+
+        gameState = 'BUSY';
+        const droppedTier = nextTier;
+        nextTier = pickNextRuneTier();
+        dropsUntilEmber = Math.max(0, dropsUntilEmber - 1);
+        updateHud();
+
+        // Place rune at targetRow with a negative yOffset so it animates falling from the top of the well
+        const fallDistanceCells = targetRow + 1.2;
+        grid[targetRow][col] = {
+          type: 'rune',
+          tier: droppedTier,
+          yOffset: -fallDistanceCells,
+          vy: 0,
+          scale: 1,
+          pulse: 0.25,
+          lastMovedStep: performance.now()
+        };
+
+        sound.playDrop();
+        await waitForGravityToSettle();
+        sound.playSettle();
+
+        // Spawn small landing sparks
+        const pos = cellToPixel(targetRow, col);
+        spawnBurstParticles(pos.x, pos.y + layout.cellSize * 0.28, RUNE_TIERS[droppedTier].primary, 7, 1.4);
+
+        // Resolve all fusions and cascades caused by this drop
+        let cascadeCount = 0;
+        cascadeCount = await resolveAllCascades(cascadeCount, { r: targetRow, c: col });
+
+        // Check if it's time for a row of Embers to rise from the bottom
+        if (dropsUntilEmber <= 0) {
+          // Before rising, if row 0 is already occupied, game over
+          if (isWellOverflowing()) {
+            triggerGameOver();
+            return;
+          }
+          await triggerEmberRise();
+          dropsUntilEmber = DROPS_PER_EMBER;
+          updateHud();
+          // Resolve any cascades if shifting alignment caused any (rare, since whole columns shift together)
+          await resolveAllCascades(cascadeCount, null);
+        }
+
+        // After all cascades & ember rises settle, check well rim overflow (Row 0 is above the well rim!)
+        if (isWellOverflowing()) {
+          triggerGameOver();
+          return;
+        }
+
+        gameState = 'IDLE';
+        updateHud();
+      }
+
+      // Check if any column has a rune or ember sitting above the well rim (row 0)
+      function isWellOverflowing() {
+        for (let c = 0; c < COLS; c++) {
+          if (grid[0][c] !== null) {
+            return true;
+          }
+        }
+        return false;
+      }
+
+      // Apply gravity so any floating runes/embers fall into empty spaces below them
+      function applyGridGravity() {
+        let moved = false;
+        for (let c = 0; c < COLS; c++) {
+          let writeRow = TOTAL_ROWS - 1;
+          for (let r = TOTAL_ROWS - 1; r >= 0; r--) {
+            const cell = grid[r][c];
+            if (cell !== null) {
+              if (r !== writeRow) {
+                const deltaRows = writeRow - r;
+                cell.yOffset = (cell.yOffset || 0) - deltaRows;
+                cell.vy = 0;
+                cell.lastMovedStep = performance.now();
+                grid[writeRow][c] = cell;
+                grid[r][c] = null;
+                moved = true;
+              }
+              writeRow--;
+            }
+          }
+        }
+        return moved;
+      }
+
+      // Wait until all cell yOffsets have settled to 0
+      function waitForGravityToSettle() {
+        return new Promise((resolve) => {
+          function check() {
+            let anyMoving = false;
+            for (let r = 0; r < TOTAL_ROWS; r++) {
+              for (let c = 0; c < COLS; c++) {
+                const cell = grid[r][c];
+                if (cell && (Math.abs(cell.yOffset) > 0.01 || Math.abs(cell.vy) > 0.01)) {
+                  anyMoving = true;
+                  break;
+                }
+              }
+              if (anyMoving) break;
+            }
+            if (!anyMoving) {
+              resolve();
+            } else {
+              requestAnimationFrame(check);
+            }
+          }
+          requestAnimationFrame(check);
+        });
+      }
+
+      // Find connected components of 2+ orthogonally adjacent runes of the same tier
+      function findFusionGroups(preferredFocalCell) {
+        const visited = Array.from({ length: TOTAL_ROWS }, () => Array(COLS).fill(false));
+        const groups = [];
+
+        const dirs = [
+          [1, 0],
+          [-1, 0],
+          [0, 1],
+          [0, -1]
+        ];
+
+        for (let r = 0; r < TOTAL_ROWS; r++) {
+          for (let c = 0; c < COLS; c++) {
+            const cell = grid[r][c];
+            if (!cell || cell.type !== 'rune' || visited[r][c]) continue;
+
+            const tier = cell.tier;
+            const queue = [{ r, c }];
+            const members = [];
+            visited[r][c] = true;
+
+            while (queue.length > 0) {
+              const cur = queue.shift();
+              members.push(cur);
+
+              for (const [dr, dc] of dirs) {
+                const nr = cur.r + dr;
+                const nc = cur.c + dc;
+                if (nr >= 0 && nr < TOTAL_ROWS && nc >= 0 && nc < COLS && !visited[nr][nc]) {
+                  const neighbor = grid[nr][nc];
+                  if (neighbor && neighbor.type === 'rune' && neighbor.tier === tier) {
+                    visited[nr][nc] = true;
+                    queue.push({ r: nr, c: nc });
+                  }
+                }
+              }
+            }
+
+            if (members.length >= 2) {
+              // Pick anchor cell where the fused rune will form:
+              // Prefer the cell at the bottom-most row; if tied, prefer preferredFocalCell or the most recently moved rune
+              members.sort((a, b) => {
+                if (b.r !== a.r) return b.r - a.r; // Lower in well first
+                if (preferredFocalCell) {
+                  const aPref = a.r === preferredFocalCell.r && a.c === preferredFocalCell.c ? 1 : 0;
+                  const bPref = b.r === preferredFocalCell.r && b.c === preferredFocalCell.c ? 1 : 0;
+                  if (bPref !== aPref) return bPref - aPref;
+                }
+                const cellA = grid[a.r][a.c];
+                const cellB = grid[b.r][b.c];
+                return (cellB.lastMovedStep || 0) - (cellA.lastMovedStep || 0);
+              });
+
+              groups.push({
+                tier,
+                anchor: members[0],
+                members
+              });
+            }
+          }
+        }
+        return groups;
+      }
+
+      // Loop until no more adjacent same-tier runes exist
+      async function resolveAllCascades(startingCascadeCount, preferredFocalCell) {
+        let cascadeCount = startingCascadeCount;
+        let currentPreferred = preferredFocalCell;
+
+        while (true) {
+          const groups = findFusionGroups(currentPreferred);
+          if (groups.length === 0) break;
+
+          cascadeCount++;
+          if (cascadeCount > maxCascadeReached) {
+            maxCascadeReached = cascadeCount;
+          }
+
+          // Animate consumed runes sliding into their group anchor
+          mergeGhosts = [];
+          const embersToBurn = [];
+
+          for (const group of groups) {
+            const { anchor, members, tier } = group;
+
+            // Check for Embers directly below ANY cell in the fusing group!
+            // ("vanish only when a fuse happens directly above them (then they burn out)")
+            for (const m of members) {
+              const belowR = m.r + 1;
+              if (belowR < TOTAL_ROWS && grid[belowR][m.c] && grid[belowR][m.c].type === 'ember') {
+                embersToBurn.push({ r: belowR, c: m.c });
+              }
+            }
+
+            // Remove non-anchor members from grid and create slide ghosts
+            for (let i = 1; i < members.length; i++) {
+              const m = members[i];
+              grid[m.r][m.c] = null;
+              mergeGhosts.push({
+                fromR: m.r,
+                fromC: m.c,
+                toR: anchor.r,
+                toC: anchor.c,
+                tier,
+                progress: 0
+              });
+            }
+          }
+
+          // Wait ~150ms for mergeGhosts to slide into the anchor rune
+          await animateMergeGhosts(150);
+          mergeGhosts = [];
+
+          // Upgrade each anchor cell, burn out embers below, award score & FX
+          for (const group of groups) {
+            const { anchor, members, tier } = group;
+            const newTier = Math.min(8, tier + 1);
+            const isSupernova = tier === 8; // Two Ancient Suns fusing!
+
+            const pos = cellToPixel(anchor.r, anchor.c);
+            const tierInfo = RUNE_TIERS[newTier];
+
+            if (isSupernova) {
+              // Two Tier 8 Ancient Suns fuse into a radiant Supernova Ancient Sun with massive bonus!
+              grid[anchor.r][anchor.c] = {
+                type: 'rune',
+                tier: 8,
+                yOffset: 0,
+                vy: 0,
+                scale: 1.45,
+                pulse: 0.8,
+                lastMovedStep: performance.now()
+              };
+            } else {
+              grid[anchor.r][anchor.c] = {
+                type: 'rune',
+                tier: newTier,
+                yOffset: 0,
+                vy: 0,
+                scale: 1.38,
+                pulse: 0.65,
+                lastMovedStep: performance.now()
+              };
+            }
+
+            // Calculate points with multi-tile merge bonus and cascade multiplier
+            const extraTilesBonus = members.length > 2 ? (members.length - 1) : 1;
+            const basePts = isSupernova ? 6400 : tierInfo.basePoints * extraTilesBonus;
+            const gainedPts = basePts * cascadeCount;
+            addScore(gainedPts);
+
+            // Sound & Screen Shake
+            sound.playFuse(newTier, cascadeCount);
+            if (cascadeCount >= 2 || newTier >= 5) {
+              screenShake = Math.min(14, 3 + cascadeCount * 2.5 + (newTier >= 6 ? 4 : 0));
+            }
+
+            // Shockwave & Particle Burst
+            shockwaves.push({
+              x: pos.x,
+              y: pos.y,
+              radius: layout.cellSize * 0.2,
+              maxRadius: layout.cellSize * (1.25 + cascadeCount * 0.22),
+              color: tierInfo.primary,
+              alpha: 1
+            });
+            spawnBurstParticles(pos.x, pos.y, tierInfo.primary, 18 + cascadeCount * 6, 3.2);
+            spawnBurstParticles(pos.x, pos.y, tierInfo.secondary, 10, 2.4);
+
+            // Floating score & cascade multiplier popup
+            floatingTexts.push({
+              x: pos.x,
+              y: pos.y - layout.cellSize * 0.2,
+              text: `+${gainedPts}`,
+              subtext: cascadeCount > 1 ? `CASCADE x${cascadeCount}!` : (members.length > 2 ? `${members.length}-WAY FUSE!` : ''),
+              color: tierInfo.primary,
+              alpha: 1,
+              vy: -1.4,
+              scale: cascadeCount > 1 ? 1.18 : 1.0
+            });
+
+            // Check for New Rune Discovery
+            if (newTier > highestTierReached) {
+              highestTierReached = newTier;
+            }
+            if (!discoveredTiers.has(newTier)) {
+              discoveredTiers.add(newTier);
+              sound.playDiscoveryFanfare();
+              showDiscoveryToast(newTier);
+            }
+
+            currentPreferred = { r: anchor.r, c: anchor.c };
+          }
+
+          // Burn out any Embers that were directly below a fuse
+          if (embersToBurn.length > 0) {
+            let burnedAny = false;
+            for (const eb of embersToBurn) {
+              const cell = grid[eb.r][eb.c];
+              if (cell && cell.type === 'ember') {
+                grid[eb.r][eb.c] = null;
+                burnedAny = true;
+                const ePos = cellToPixel(eb.r, eb.c);
+                spawnBurstParticles(ePos.x, ePos.y, '#ff5412', 22, 3.0);
+                spawnBurstParticles(ePos.x, ePos.y, '#ffd166', 10, 2.0);
+                floatingTexts.push({
+                  x: ePos.x,
+                  y: ePos.y,
+                  text: 'EMBER BURNED!',
+                  subtext: '+50',
+                  color: '#ff9f1c',
+                  alpha: 1,
+                  vy: -1.2,
+                  scale: 0.92
+                });
+                addScore(50 * cascadeCount);
+              }
+            }
+            if (burnedAny) {
+              sound.playEmberBurnout();
+            }
+          }
+
+          updateHud();
+
+          // Pause briefly so player feels the fuse burst before gravity drops remaining runes
+          await delay(110);
+
+          // Settle board with gravity
+          const anyFell = applyGridGravity();
+          if (anyFell) {
+            await waitForGravityToSettle();
+            sound.playSettle();
+          }
+          await delay(65);
+        }
+
+        return cascadeCount;
+      }
+
+      // Every 12 drops, push all columns up 1 cell and insert a row of Embers at the bottom
+      async function triggerEmberRise() {
+        sound.playEmberRise();
+        screenShake = 7;
+
+        for (let c = 0; c < COLS; c++) {
+          for (let r = 0; r < TOTAL_ROWS - 1; r++) {
+            grid[r][c] = grid[r + 1][c];
+            if (grid[r][c]) {
+              grid[r][c].yOffset = 1.0; // Starts 1 cell lower and slides up to 0
+              grid[r][c].vy = 0;
+            }
+          }
+          // Insert fresh Ember in bottom row
+          grid[TOTAL_ROWS - 1][c] = {
+            type: 'ember',
+            yOffset: 1.0,
+            vy: 0,
+            scale: 1
+          };
+          const bPos = cellToPixel(TOTAL_ROWS - 1, c);
+          spawnBurstParticles(bPos.x, bPos.y + layout.cellSize * 0.3, '#ff4500', 8, 1.8);
+        }
+
+        floatingTexts.push({
+          x: layout.wellX + layout.wellW / 2,
+          y: layout.wellY + layout.wellH - layout.cellSize * 0.8,
+          text: 'EMBERS RISE!',
+          subtext: 'Fuse above embers to burn them out',
+          color: '#ff6b2b',
+          alpha: 1,
+          vy: -1.0,
+          scale: 1.05
+        });
+
+        await waitForGravityToSettle();
+      }
+
+      function addScore(pts) {
+        score += pts;
+        if (score > bestScore) {
+          bestScore = score;
+          newBestAchievedThisRun = true;
+          saveBestScore(bestScore);
+        }
+        scoreDisplay.classList.remove('bump');
+        void scoreDisplay.offsetWidth;
+        scoreDisplay.classList.add('bump');
+        setTimeout(() => scoreDisplay.classList.remove('bump'), 140);
+      }
+
+      function triggerGameOver() {
+        gameState = 'GAMEOVER';
+        sound.playGameOver();
+        screenShake = 12;
+
+        goScoreEl.textContent = score.toLocaleString();
+        goBestEl.textContent = bestScore.toLocaleString();
+        goMaxTierEl.textContent = RUNE_TIERS[highestTierReached].name;
+        goMaxTierEl.style.color = RUNE_TIERS[highestTierReached].primary;
+        goMaxComboEl.textContent = `x${maxCascadeReached}`;
+        newBestPill.classList.toggle('hidden', !newBestAchievedThisRun);
+
+        setTimeout(() => {
+          gameoverOverlay.classList.remove('hidden');
+        }, 420);
+      }
+
+      function animateMergeGhosts(durationMs) {
+        return new Promise((resolve) => {
+          const start = performance.now();
+          function step(now) {
+            const t = Math.min(1, (now - start) / durationMs);
+            // Ease-in-out cubic
+            const eased = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+            for (const g of mergeGhosts) {
+              g.progress = eased;
+            }
+            if (t < 1) {
+              requestAnimationFrame(step);
+            } else {
+              resolve();
+            }
+          }
+          requestAnimationFrame(step);
+        });
+      }
+
+      function delay(ms) {
+        return new Promise((resolve) => setTimeout(resolve, ms));
+      }
+
+      // =========================================================================
+      // 7. CANVAS SIZING, COORDINATES & INPUT CONTROLS
+      // =========================================================================
+      const layout = {
+        width: 360,
+        height: 540,
+        dpr: 1,
+        cellSize: 60,
+        wellX: 15,
+        wellY: 70,
+        wellW: 330,
+        wellH: 420,
+        rimY: 70
+      };
+
+      function resizeCanvases() {
+        const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+        layout.dpr = dpr;
+
+        // Background ambient ember canvas
+        bgCanvas.width = Math.floor(window.innerWidth * dpr);
+        bgCanvas.height = Math.floor(window.innerHeight * dpr);
+        bgCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+        // Main game well canvas
+        const stageRect = document.getElementById('well-stage').getBoundingClientRect();
+        const cw = Math.max(260, Math.floor(stageRect.width));
+        const ch = Math.max(320, Math.floor(stageRect.height));
+
+        gameCanvas.width = Math.floor(cw * dpr);
+        gameCanvas.height = Math.floor(ch * dpr);
+        gameCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+        layout.width = cw;
+        layout.height = ch;
+
+        // Compute cell size so 5 columns + 7 well rows + 1 top drop/overflow row fit comfortably
+        const padX = 14;
+        const padY = 12;
+        const maxCellW = Math.floor((cw - padX * 2) / COLS);
+        const maxCellH = Math.floor((ch - padY * 2) / (WELL_ROWS + 1.25));
+        const cellSize = Math.max(36, Math.min(maxCellW, maxCellH));
+
+        layout.cellSize = cellSize;
+        layout.wellW = cellSize * COLS;
+        layout.wellH = cellSize * WELL_ROWS;
+        layout.wellX = Math.floor((cw - layout.wellW) / 2);
+        // Leave space above the rim for the drop preview & row 0 overflow zone
+        layout.rimY = Math.floor((ch - layout.wellH + cellSize * 0.95) / 2);
+        layout.wellY = layout.rimY;
+      }
+
+      // Convert grid (r, c) where r=0 is above the rim and r=1..7 are inside the well
+      function cellToPixel(r, c) {
+        const x = layout.wellX + (c + 0.5) * layout.cellSize;
+        const y = layout.rimY + (r - 0.5) * layout.cellSize;
+        return { x, y };
+      }
+
+      function pointerXToCol(clientX) {
+        const rect = gameCanvas.getBoundingClientRect();
+        const relX = clientX - rect.left - layout.wellX;
+        const col = Math.floor(relX / layout.cellSize);
+        return Math.max(0, Math.min(COLS - 1, col));
+      }
+
+      // Pointer & Touch Events on Game Canvas
+      let pointerDownActive = false;
+
+      gameCanvas.addEventListener('pointermove', (e) => {
+        if (gameState !== 'IDLE' && gameState !== 'BUSY') return;
+        hoverCol = pointerXToCol(e.clientX);
+      });
+
+      gameCanvas.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        sound.ensureContext();
+        if (gameState !== 'IDLE') return;
+        pointerDownActive = true;
+        hoverCol = pointerXToCol(e.clientX);
+      });
+
+      gameCanvas.addEventListener('pointerup', (e) => {
+        e.preventDefault();
+        if (!pointerDownActive) return;
+        pointerDownActive = false;
+        if (gameState !== 'IDLE') return;
+        const col = pointerXToCol(e.clientX);
+        hoverCol = col;
+        handleColumnDrop(col);
+      });
+
+      gameCanvas.addEventListener('pointercancel', () => {
+        pointerDownActive = false;
+      });
+
+      // Keyboard accessibility (Left/Right/A/D, 1-5, Space/Enter/Down)
+      window.addEventListener('keydown', (e) => {
+        if (gameState === 'START') {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            startNewGame();
+          }
+          return;
+        }
+        if (gameState === 'GAMEOVER') {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            startNewGame();
+          }
+          return;
+        }
+        if (gameState !== 'IDLE') return;
+
+        if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+          e.preventDefault();
+          hoverCol = (hoverCol + COLS - 1) % COLS;
+        } else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+          e.preventDefault();
+          hoverCol = (hoverCol + 1) % COLS;
+        } else if (e.key === 'ArrowDown' || e.key === ' ' || e.key === 'Enter') {
+          e.preventDefault();
+          handleColumnDrop(hoverCol);
+        } else if (e.key >= '1' && e.key <= '5') {
+          e.preventDefault();
+          const c = parseInt(e.key, 10) - 1;
+          hoverCol = c;
+          handleColumnDrop(c);
+        }
+      });
+
+      // UI Buttons
+      startBtn.addEventListener('click', () => {
+        startNewGame();
+      });
+
+      restartBtn.addEventListener('click', () => {
+        startNewGame();
+      });
+
+      muteBtn.addEventListener('click', () => {
+        const isMuted = sound.toggleMute();
+        muteBtn.classList.toggle('muted', isMuted);
+        iconSoundOn.classList.toggle('hidden', isMuted);
+        iconSoundOff.classList.toggle('hidden', !isMuted);
+      });
+
+      window.addEventListener('resize', resizeCanvases);
+
+      // =========================================================================
+      // 8. AMBIENT EMBER PARTICLES & JUICY FORGE BURSTS
+      // =========================================================================
+      const bgEmbers = [];
+      for (let i = 0; i < 42; i++) {
+        bgEmbers.push({
+          x: Math.random() * window.innerWidth,
+          y: Math.random() * window.innerHeight,
+          vx: (Math.random() - 0.5) * 0.35,
+          vy: -(0.35 + Math.random() * 0.85),
+          size: 1.2 + Math.random() * 2.6,
+          alpha: 0.2 + Math.random() * 0.55,
+          isTeal: Math.random() < 0.22,
+          phase: Math.random() * Math.PI * 2
+        });
+      }
+
+      function spawnBurstParticles(x, y, color, count, speedMul = 2.5) {
+        for (let i = 0; i < count; i++) {
+          const angle = Math.random() * Math.PI * 2;
+          const speed = (0.6 + Math.random() * 2.4) * speedMul;
+          forgeParticles.push({
+            x,
+            y,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed - 0.6,
+            size: 2.0 + Math.random() * 3.5,
+            color,
+            alpha: 1,
+            decay: 0.022 + Math.random() * 0.022
+          });
+        }
+      }
+
+      // =========================================================================
+      // 9. MAIN RENDER & ANIMATION LOOP
+      // =========================================================================
+      function updateAndRender(now) {
+        const dt = Math.min(0.05, (now - lastFrameTime) / 1000);
+        lastFrameTime = now;
+        animTime += dt;
+
+        // 1. Render Ambient Background Embers
+        renderBackgroundEmbers();
+
+        // 2. Render Start Overlay Hero Emblem or Toast Icon
+        if (!startOverlay.classList.contains('hidden')) {
+          heroCtx.clearRect(0, 0, 192, 192);
+          drawRuneToken(heroCtx, 96, 96, 78, 8, animTime, 1, 1, 0.08);
+        }
+
+        if (toastEl.classList.contains('visible')) {
+          toastCtx.clearRect(0, 0, 72, 72);
+          drawRuneToken(toastCtx, 36, 36, 30, activeToastTier, animTime);
+        }
+
+        // 3. Render Next Rune Preview in HUD
+        nextCtx.clearRect(0, 0, 72, 72);
+        drawRuneToken(nextCtx, 36, 36, 30, nextTier, animTime);
+
+        // 4. Update Physics / Spring Settling for Grid Cells
+        updateGridKinematics(dt);
+
+        // 5. Render Main Forge Well Canvas
+        renderForgeWell(dt);
+
+        requestAnimationFrame(updateAndRender);
+      }
+
+      function renderBackgroundEmbers() {
+        const w = window.innerWidth;
+        const h = window.innerHeight;
+        bgCtx.clearRect(0, 0, w, h);
+
+        for (const p of bgEmbers) {
+          p.x += p.vx + Math.sin(animTime * 1.5 + p.phase) * 0.2;
+          p.y += p.vy;
+          if (p.y < -10) {
+            p.y = h + 10;
+            p.x = Math.random() * w;
+          }
+          if (p.x < -10) p.x = w + 10;
+          if (p.x > w + 10) p.x = -10;
+
+          const flicker = 0.65 + 0.35 * Math.sin(animTime * 5 + p.phase);
+          bgCtx.fillStyle = p.isTeal
+            ? `rgba(0, 229, 255, ${p.alpha * flicker})`
+            : `rgba(255, 118, 43, ${p.alpha * flicker})`;
+          bgCtx.beginPath();
+          bgCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+          bgCtx.fill();
+        }
+      }
+
+      function updateGridKinematics(dt) {
+        const gravityAccel = 36; // cells / s^2
+        for (let r = 0; r < TOTAL_ROWS; r++) {
+          for (let c = 0; c < COLS; c++) {
+            const cell = grid[r][c];
+            if (!cell) continue;
+
+            // Falling downward (yOffset < 0) with a soft landing bounce
+            if (cell.yOffset < 0) {
+              cell.vy += gravityAccel * dt;
+              cell.yOffset += cell.vy * dt;
+              if (cell.yOffset >= 0) {
+                if (cell.vy > 3.5) {
+                  // Soft bounce
+                  cell.yOffset = -0.001;
+                  cell.vy = -cell.vy * 0.24;
+                } else {
+                  cell.yOffset = 0;
+                  cell.vy = 0;
+                }
+              }
+            } else if (cell.yOffset > 0) {
+              // Rising upward (from ember push, yOffset > 0 -> 0)
+              cell.yOffset = Math.max(0, cell.yOffset - dt * 6.5);
+            }
+
+            // Smooth scale recovery
+            if (cell.scale > 1) {
+              cell.scale = Math.max(1, cell.scale - dt * 2.8);
+            }
+            if (cell.pulse > 0) {
+              cell.pulse = Math.max(0, cell.pulse - dt * 1.8);
+            }
+          }
+        }
+      }
+
+      function renderForgeWell(dt) {
+        const ctx = gameCtx;
+        const { width, height, wellX, wellY, wellW, wellH, cellSize, rimY } = layout;
+
+        ctx.clearRect(0, 0, width, height);
+        ctx.save();
+
+        // Screen shake on big cascades or ember rises
+        if (screenShake > 0.1) {
+          const sx = (Math.random() - 0.5) * screenShake;
+          const sy = (Math.random() - 0.5) * screenShake;
+          ctx.translate(sx, sy);
+          screenShake *= 0.86;
+        } else {
+          screenShake = 0;
+        }
+
+        // Well Backdrop (Stone Forge Chamber)
+        drawRoundedRect(ctx, wellX - 6, wellY - 4, wellW + 12, wellH + 10, 16);
+        const wellBgGrad = ctx.createLinearGradient(0, wellY, 0, wellY + wellH);
+        wellBgGrad.addColorStop(0, 'rgba(13, 15, 22, 0.94)');
+        wellBgGrad.addColorStop(0.75, 'rgba(19, 18, 26, 0.96)');
+        wellBgGrad.addColorStop(1, 'rgba(42, 20, 14, 0.96)');
+        ctx.fillStyle = wellBgGrad;
+        ctx.fill();
+
+        // Bottom Magma Hearth Glow inside the well
+        const hearthGrad = ctx.createLinearGradient(0, wellY + wellH - cellSize * 1.4, 0, wellY + wellH);
+        hearthGrad.addColorStop(0, 'rgba(255, 84, 18, 0)');
+        hearthGrad.addColorStop(1, `rgba(255, 84, 18, ${0.18 + 0.06 * Math.sin(animTime * 3)})`);
+        ctx.fillStyle = hearthGrad;
+        ctx.fillRect(wellX, wellY + wellH - cellSize * 1.4, wellW, cellSize * 1.4);
+
+        // Highlighted Column Under Finger / Cursor + Landing Ghost
+        if (hoverCol >= 0 && hoverCol < COLS && (gameState === 'IDLE' || gameState === 'BUSY')) {
+          const colX = wellX + hoverCol * cellSize;
+          const colGrad = ctx.createLinearGradient(0, wellY - cellSize * 0.7, 0, wellY + wellH);
+          colGrad.addColorStop(0, 'rgba(0, 229, 255, 0.14)');
+          colGrad.addColorStop(0.5, 'rgba(0, 229, 255, 0.06)');
+          colGrad.addColorStop(1, 'rgba(255, 107, 43, 0.12)');
+          ctx.fillStyle = colGrad;
+          ctx.fillRect(colX, wellY, cellSize, wellH);
+
+          // Ghost preview at the top drop slot & target landing slot when IDLE
+          if (gameState === 'IDLE') {
+            const topCenterX = colX + cellSize * 0.5;
+            const topCenterY = rimY - cellSize * 0.48;
+
+            // Floating ready rune above the column
+            drawRuneToken(ctx, topCenterX, topCenterY, cellSize * 0.45, nextTier, animTime, 0.96, 0.95);
+
+            // Find landing row in hoverCol to show subtle target ring
+            let landRow = -1;
+            for (let r = TOTAL_ROWS - 1; r >= 1; r--) {
+              if (!grid[r][hoverCol]) {
+                landRow = r;
+                break;
+              }
+            }
+            if (landRow !== -1) {
+              const landPos = cellToPixel(landRow, hoverCol);
+              // Vertical guide beam
+              ctx.save();
+              ctx.strokeStyle = hexToRgba(RUNE_TIERS[nextTier].primary, 0.22);
+              ctx.setLineDash([4, 5]);
+              ctx.lineWidth = 1.5;
+              ctx.beginPath();
+              ctx.moveTo(topCenterX, topCenterY + cellSize * 0.35);
+              ctx.lineTo(landPos.x, landPos.y - cellSize * 0.35);
+              ctx.stroke();
+              ctx.restore();
+
+              // Ghost landing silhouette
+              drawRuneToken(ctx, landPos.x, landPos.y, cellSize * 0.44, nextTier, animTime, 0.92, 0.24);
+            }
+          }
+        }
+
+        // Subtle Grid Cells & Column Dividers
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+        ctx.lineWidth = 1;
+        for (let c = 1; c < COLS; c++) {
+          const x = wellX + c * cellSize;
+          ctx.beginPath();
+          ctx.moveTo(x, wellY);
+          ctx.lineTo(x, wellY + wellH);
+          ctx.stroke();
+        }
+        for (let r = 1; r < WELL_ROWS; r++) {
+          const y = wellY + r * cellSize;
+          ctx.beginPath();
+          ctx.moveTo(wellX, y);
+          ctx.lineTo(wellX + wellW, y);
+          ctx.stroke();
+        }
+
+        // Danger Warning Glow on Top Well Row (Row 1) if any column is 1 cell from overflowing
+        let topRowOccupied = false;
+        for (let c = 0; c < COLS; c++) {
+          if (grid[1] && grid[1][c]) {
+            topRowOccupied = true;
+            break;
+          }
+        }
+
+        // Well Rim Line (Runic Threshold at rimY)
+        ctx.save();
+        const rimPulse = topRowOccupied ? 0.55 + 0.45 * Math.sin(animTime * 8) : 0.65;
+        ctx.strokeStyle = topRowOccupied
+          ? `rgba(255, 70, 50, ${rimPulse})`
+          : `rgba(0, 229, 255, 0.42)`;
+        ctx.lineWidth = topRowOccupied ? 3 : 2;
+        ctx.setLineDash([8, 6]);
+        ctx.beginPath();
+        ctx.moveTo(wellX - 2, rimY);
+        ctx.lineTo(wellX + wellW + 2, rimY);
+        ctx.stroke();
+        ctx.restore();
+
+        // Outer Metallic Forge Frame
+        drawRoundedRect(ctx, wellX - 6, wellY - 4, wellW + 12, wellH + 10, 16);
+        ctx.lineWidth = 2.5;
+        const frameGrad = ctx.createLinearGradient(0, wellY, 0, wellY + wellH);
+        frameGrad.addColorStop(0, 'rgba(0, 229, 255, 0.38)');
+        frameGrad.addColorStop(0.5, 'rgba(255, 255, 255, 0.14)');
+        frameGrad.addColorStop(1, 'rgba(255, 107, 43, 0.55)');
+        ctx.strokeStyle = frameGrad;
+        ctx.stroke();
+
+        // Draw All Settled & Falling Runes + Embers
+        const tokenRadius = cellSize * 0.47;
+        for (let r = 0; r < TOTAL_ROWS; r++) {
+          for (let c = 0; c < COLS; c++) {
+            const cell = grid[r][c];
+            if (!cell) continue;
+            const pos = cellToPixel(r, c);
+            const drawY = pos.y + (cell.yOffset || 0) * cellSize;
+
+            if (cell.type === 'ember') {
+              drawEmberBlock(ctx, pos.x, drawY, tokenRadius, animTime, cell.scale || 1, 1);
+            } else {
+              drawRuneToken(
+                ctx,
+                pos.x,
+                drawY,
+                tokenRadius,
+                cell.tier,
+                animTime,
+                cell.scale || 1,
+                1,
+                cell.pulse || 0
+              );
+            }
+          }
+        }
+
+        // Draw Sliding Merge Ghosts (during fusion pull)
+        for (const g of mergeGhosts) {
+          const fromPos = cellToPixel(g.fromR, g.fromC);
+          const toPos = cellToPixel(g.toR, g.toC);
+          const gx = fromPos.x + (toPos.x - fromPos.x) * g.progress;
+          const gy = fromPos.y + (toPos.y - fromPos.y) * g.progress;
+          const gScale = 1.05 - g.progress * 0.25;
+          drawRuneToken(ctx, gx, gy, tokenRadius, g.tier, animTime, gScale, 1 - g.progress * 0.2, 0.35);
+        }
+
+        // Draw Expanding Shockwaves
+        for (let i = shockwaves.length - 1; i >= 0; i--) {
+          const sw = shockwaves[i];
+          sw.radius += (sw.maxRadius - sw.radius) * 0.22;
+          sw.alpha -= dt * 2.8;
+          if (sw.alpha <= 0) {
+            shockwaves.splice(i, 1);
+            continue;
+          }
+          ctx.save();
+          ctx.strokeStyle = hexToRgba(sw.color, sw.alpha);
+          ctx.lineWidth = 3.5 * sw.alpha;
+          ctx.beginPath();
+          ctx.arc(sw.x, sw.y, sw.radius, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        // Draw Juicy Burst Particles
+        for (let i = forgeParticles.length - 1; i >= 0; i--) {
+          const p = forgeParticles[i];
+          p.x += p.vx;
+          p.y += p.vy;
+          p.vy += 0.12; // light gravity
+          p.alpha -= p.decay;
+          if (p.alpha <= 0) {
+            forgeParticles.splice(i, 1);
+            continue;
+          }
+          ctx.save();
+          ctx.globalAlpha = Math.max(0, p.alpha);
+          ctx.fillStyle = p.color;
+          ctx.shadowColor = p.color;
+          ctx.shadowBlur = 6;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.size * p.alpha, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+
+        // Draw Floating Score & Cascade Popups
+        for (let i = floatingTexts.length - 1; i >= 0; i--) {
+          const ft = floatingTexts[i];
+          ft.y += ft.vy;
+          ft.alpha -= dt * 1.05;
+          if (ft.alpha <= 0) {
+            floatingTexts.splice(i, 1);
+            continue;
+          }
+          ctx.save();
+          ctx.globalAlpha = Math.max(0, ft.alpha);
+          ctx.translate(ft.x, ft.y);
+          ctx.scale(ft.scale, ft.scale);
+          ctx.textAlign = 'center';
+
+          ctx.font = '900 18px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+          ctx.fillStyle = '#090a0f';
+          ctx.lineWidth = 4;
+          ctx.strokeStyle = 'rgba(0, 0, 0, 0.85)';
+          ctx.strokeText(ft.text, 0, 0);
+          ctx.fillStyle = ft.color;
+          ctx.fillText(ft.text, 0, 0);
+
+          if (ft.subtext) {
+            ctx.font = '800 11px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+            ctx.strokeText(ft.subtext, 0, -18);
+            ctx.fillStyle = '#ffffff';
+            ctx.fillText(ft.subtext, 0, -18);
+          }
+          ctx.restore();
+        }
+
+        ctx.restore();
+      }
+
+      // Initialize layout and start animation loop on load
+      function init() {
+        grid = createEmptyGrid();
+        resizeCanvases();
+        updateHud();
+        requestAnimationFrame(updateAndRender);
+      }
+
+      if (document.readyState === 'loading') {
+        window.addEventListener('DOMContentLoaded', init);
+      } else {
+        init();
+      }
+    })();
+  </script>
+</body>
+</html>
